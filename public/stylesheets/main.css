@@ -10,7 +10,54 @@
     padding: 9px;
 }
 
-.form-box {
+.login {
     width: 30%;
     margin: 25px auto;
+}
+
+.form-box {
+    width: 90%;
+    margin: 25px auto;
+}
+
+.delete-form {
+    display: inline;
+}
+
+#index-content {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#index-content img {
+    min-height: 150px;
+    max-height: 330px;
+    object-fit: cover;
+    object-position: center center;
+}
+
+#show-image {
+    min-height: 550px;
+    object-fit: cover;
+    object-position: center center;
+}
+
+.center-block {
+    max-height: 100vh;
+}
+
+/* Google Maps */
+#map {
+    height: 550px;
+    width: 100%;
+}
+
+#location {
+    display: none;
+}
+
+@media only screen and (min-width: 768px) {
+    .form-box {
+        width: 50%;
+    }
 }

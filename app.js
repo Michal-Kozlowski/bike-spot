@@ -2,89 +2,50 @@ var express     = require("express"),
     app         = express(),
     bodyParser  = require("body-parser"),
     mongoose    = require("mongoose"),
-    Place       = require("./models/place"),
-    Comment     = require("./models/comment"),
-    seedDB      = require("./seeds");
+    flash       = require("connect-flash"),
+    passport    = require("passport"),
+    LocalStrategy = require("passport-local"),
+    methodOverride = require("method-override"),
+    User        = require("./models/user");
+    
+var indexRoutes     = require("./routes/index"),
+    placeRoutes     = require("./routes/places"),
+    commentRoutes   = require("./routes/comments");
 
-seedDB();
-
-mongoose.connect("mongodb://localhost/bikespot", {useMongoClient: true});
+var url = process.env.DATABASEURL || "mongodb://localhost/bikespot";
+mongoose.connect(url, {useMongoClient: true});
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 app.use(express.static(__dirname + "/public"));
+app.use(methodOverride("_method"));
+app.use(flash());
+app.locals.moment = require("moment");
 
-app.get("/", function(req, res){
-    res.render("landing");
+//PASSPORT CONFIGURATION
+app.use(require("express-session")({
+    secret: "Secret secrets are no fun, secret secrets hurt someone",
+    resave: false,
+    saveUninitialized: false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+app.use(function(req, res, next){
+    res.locals.currentUser = req.user;
+    res.locals.error = req.flash("error");
+    res.locals.success = req.flash("success");
+    next();
 });
 
-app.get("/places", function(req, res){
-    Place.find({}, function(err, allPlaces){
-        if(err){
-            console.log(err);
-        } else {
-            res.render("places/index", {places: allPlaces});
-        }
-    });
-});
+app.use("/", indexRoutes);
+app.use("/places", placeRoutes);
+app.use("/places/:id/comments", commentRoutes);
 
-app.post("/places", function(req, res){
-    var name = req.body.name;
-    var image = req.body.image;
-    var desc = req.body.description;
-    var newPlace = {name: name, image: image, description: desc};
-    Place.create(newPlace, function(err, newlyCreated){
-        if(err){
-            console.log(err);
-        } else {
-            res.redirect("/places");
-        }
-    });
-});
-
-app.get("/places/new", function(req, res){
-    res.render("places/new");
-});
-
-app.get("/places/:id", function(req, res){
-    Place.findById(req.params.id).populate("comments").exec(function(err, foundPlace){
-        if(err){
-            console.log(err);
-        } else {
-            console.log(foundPlace);
-            res.render("places/show", {place: foundPlace});
-        }
-    });
-});
-
-//COMMENTS ROUTES
-app.get("/places/:id/comments/new", function(req, res){
-    Place.findById(req.params.id, function(err, place){
-        if(err){
-            console.log(err);
-        } else {
-            res.render("comments/new", {place: place});
-        }
-    });
-});
-
-app.post("/places/:id/comments", function(req, res){
-    Place.findById(req.params.id, function(err, place) {
-        if(err){
-            console.log(err);
-            res.redirect("/places");
-        } else {
-            Comment.create(req.body.comment, function(err, comment){
-                if(err){
-                    console.log(err);
-                } else {
-                    place.comments.push(comment);
-                    place.save();
-                    res.redirect("/places/" + place._id);
-                }
-            });
-        }
-    });
-});
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
 app.listen(process.env.PORT, process.env.IP, function(){
     console.log("Server is running");
